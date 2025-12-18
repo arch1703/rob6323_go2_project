@@ -11,6 +11,8 @@ import math
 import torch
 from collections.abc import Sequence
 
+import numpy as np
+
 import isaaclab.sim as sim_utils
 from isaaclab.assets import Articulation
 from isaaclab.envs import DirectRLEnv
@@ -94,6 +96,8 @@ class Rob6323Go2Env(DirectRLEnv):
         # clone and replicate
         self.scene.clone_environments(copy_from_source=False)
         # we need to explicitly filter collisions for CPU simulation
+
+        self.scene.sensors["contact_sensor"] = self._contact_sensor
         if self.device == "cpu":
             self.scene.filter_collisions(global_prim_paths=[])
         # add articulation to scene
