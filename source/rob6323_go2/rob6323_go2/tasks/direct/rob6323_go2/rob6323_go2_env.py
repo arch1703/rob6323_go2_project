@@ -45,7 +45,13 @@ class Rob6323Go2Env(DirectRLEnv):
                 "track_lin_vel_xy_exp",
                 "track_ang_vel_z_exp",
                 "rew_action_rate",
-                "raibert_heuristic"
+                "raibert_heuristic",
+
+                ## Additional
+                "orient",
+                "lin_vel_z",
+                "dof_vel",
+                "ang_vel_xy",
             ]
         }
         # Get specific body indices
@@ -145,12 +151,40 @@ class Rob6323Go2Env(DirectRLEnv):
         self._step_contact_targets() # Update gait state
         rew_raibert_heuristic = self._reward_raibert_heuristic()
         
+        ## Additional 
+        rew_orient = torch.sum(
+            torch.square(self.robot.data.projected_gravity_b[:, :2]),
+            dim=1,
+        )
+
+        # root_lin_vel_b shape: (num_envs, 3)
+        rew_lin_vel_z = torch.square(self.robot.data.root_lin_vel_b[:, 2])
+
+        # joint_vel shape: (num_envs, num_dofs)
+        rew_dof_vel = torch.sum(
+            torch.square(self.robot.data.joint_vel),
+            dim=1,
+        )
+
+        # root_ang_vel_b shape: (num_envs, 3)
+        rew_ang_vel_xy = torch.sum(
+            torch.square(self.robot.data.root_ang_vel_b[:, :2]),
+            dim=1,
+        )
+
         rewards = {
             "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale,
             "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale,
             "rew_action_rate": rew_action_rate * self.cfg.action_rate_reward_scale,
             "raibert_heuristic": rew_raibert_heuristic * self.cfg.raibert_heuristic_reward_scale,
+
+            # Additional
+            "orient": rew_orient * self.cfg.orient_reward_scale,
+            "lin_vel_z": rew_lin_vel_z * self.cfg.lin_vel_z_reward_scale,
+            "dof_vel": rew_dof_vel * self.cfg.dof_vel_reward_scale,
+            "ang_vel_xy": rew_ang_vel_xy * self.cfg.ang_vel_xy_reward_scale,
         }
+
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
         for key, value in rewards.items():
@@ -207,6 +241,8 @@ class Rob6323Go2Env(DirectRLEnv):
         self.last_actions[env_ids] = 0.
         # Reset raibert quantity
         self.gait_indices[env_ids] = 0
+
+    
 
     def _set_debug_vis_impl(self, debug_vis: bool):
         # set visibility of markers
@@ -377,3 +413,11 @@ class Rob6323Go2Env(DirectRLEnv):
         reward = torch.sum(torch.square(err_raibert_heuristic), dim=(1, 2))
 
         return reward
+    
+    # In Rob6323Go2Env (add new property)
+    @property
+    def foot_positions_w(self) -> torch.Tensor:
+        """Returns the feet positions in the world frame.
+        Shape: (num_envs, num_feet, 3)
+        """
+        return self.robot.data.body_pos_w[:, self._feet_ids]

@@ -108,3 +108,9 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     action_rate_reward_scale = -0.1
     
     base_height_min = 0.20  # Terminate if base is lower than 20cm
+
+    # In Rob6323Go2EnvCfg
+    orient_reward_scale = -5.0
+    lin_vel_z_reward_scale = -0.02
+    dof_vel_reward_scale = -0.0001
+    ang_vel_xy_reward_scale = -0.001
