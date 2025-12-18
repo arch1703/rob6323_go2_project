@@ -54,6 +54,7 @@ class Rob6323Go2Env(DirectRLEnv):
                 "lin_vel_z",
                 "dof_vel",
                 "ang_vel_xy",
+                "torque",
             ]
         }
         # Get specific body indices
@@ -161,6 +162,10 @@ class Rob6323Go2Env(DirectRLEnv):
             dim=1,
         )
 
+        # Torque magnitude penalty (L2 norm)
+        rew_torque = torch.sum(torch.square(self._torques), dim=1)
+
+
         # root_lin_vel_b shape: (num_envs, 3)
         rew_lin_vel_z = torch.square(self.robot.data.root_lin_vel_b[:, 2])
 
@@ -187,6 +192,8 @@ class Rob6323Go2Env(DirectRLEnv):
             "lin_vel_z": rew_lin_vel_z * self.cfg.lin_vel_z_reward_scale,
             "dof_vel": rew_dof_vel * self.cfg.dof_vel_reward_scale,
             "ang_vel_xy": rew_ang_vel_xy * self.cfg.ang_vel_xy_reward_scale,
+            # NEW: torque penalty
+            "torque": rew_torque * self.cfg.torque_reward_scale,
         }
 
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
@@ -321,6 +328,7 @@ class Rob6323Go2Env(DirectRLEnv):
             self.torque_limits,
         )
 
+        self.torques = torques
         # Apply torques to the robot
         self.robot.set_joint_effort_target(torques)
         

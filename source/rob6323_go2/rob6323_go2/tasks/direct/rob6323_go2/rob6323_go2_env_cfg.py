@@ -34,6 +34,9 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     feet_clearance_reward_scale = -30.0
     tracking_contacts_shaped_force_reward_scale = 4.0
 
+    # Additional
+    torque_reward_scale = -1e-4
+
     # simulation
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
@@ -76,13 +79,6 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     damping=0.0,    # CRITICAL: Set to 0 to disable implicit D-gain
 )
     
-    @property
-    def foot_positions_w(self) -> torch.Tensor:
-        """Returns the feet positions in the world frame.
-        Shape: (num_envs, num_feet, 3)
-        """
-        return self.robot.data.body_pos_w[:, self._feet_ids]
-
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
     contact_sensor: ContactSensorCfg = ContactSensorCfg(
@@ -107,7 +103,7 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     yaw_rate_reward_scale = 0.5
     action_rate_reward_scale = -0.1
     
-    base_height_min = 0.20  # Terminate if base is lower than 20cm
+    base_height_min = 0.05  # Terminate if base is lower than 20cm
 
     # In Rob6323Go2EnvCfg
     orient_reward_scale = -5.0
