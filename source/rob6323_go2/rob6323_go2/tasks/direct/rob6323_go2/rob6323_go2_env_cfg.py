@@ -35,7 +35,9 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     tracking_contacts_shaped_force_reward_scale = 4.0
 
     # Additional
-    torque_reward_scale = -1e-4
+    torque_reward_scale = -5e-5
+    #-1e-4 with this got log/134757
+    foot_slip_reward_scale = -0.005
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
