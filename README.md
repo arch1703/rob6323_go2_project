@@ -165,3 +165,213 @@ The suggested way to inspect these logs is via the Open OnDemand web interface:
 
 ---
 Students should only edit README.md below this line.
+
+
+# ROB6323 Go2 Locomotion — Summary of Modifications
+
+## Overview
+
+This project extends the provided ROB6323 Go2 locomotion baseline environment. The original environment used joint position control and only rewarded linear and yaw velocity tracking. Following the official course tutorial (Parts 1–6) and TA guidance, we introduced torque-level control, gait modeling, stability rewards, and advanced foot interaction modeling. Additional reward terms were added to further improve gait quality and realism.
+
+---
+
+## Tutorial Coverage
+
+- **Tutorial Parts Implemented:** Parts 1–6  
+- **Baseline (Parts 1–4):** Initially completed in the provided repository  
+- **Our Work:** Implemented and extended **Parts 5–6**, plus additional reward shaping and TA-requested fixes
+
+---
+
+## Major Changes and Rationale
+
+### 1. Torque-Level PD Control *(Tutorial Part 1)*
+**What changed**
+- Replaced joint position targets with explicit PD torque control.
+- Disabled Isaac Lab’s implicit actuator stiffness and damping.
+- Added torque clipping and torque logging.
+
+**Why**
+Torque control enables smoother and more realistic actuation, allows torque regularization, and aligns with modern quadruped locomotion pipelines.
+
+**Where**
+- `rob6323_go2_env.py`: `_pre_physics_step`, `_apply_action`
+- `rob6323_go2_env_cfg.py`: actuator stiffness/damping set to zero, PD gains and torque limits defined
+
+---
+
+### 2. Action Rate Regularization *(Tutorial Part 1)*
+**What changed**
+- Added a rolling action history buffer (`last_actions`).
+- Penalized both first-order (action rate) and second-order (action acceleration) differences.
+
+**Why**
+Reduces jerky motions, improves smoothness, and stabilizes training.
+
+**Where**
+- `rob6323_go2_env.py`: `last_actions`, `rew_action_rate` in `_get_rewards`
+
+---
+
+### 3. Gait Phase Modeling and Clock Inputs *(Tutorial Part 4)*
+**What changed**
+- Implemented a periodic gait clock.
+- Generated smooth stance/swing schedules for all four feet.
+- Added gait phase signals (`clock_inputs`) to the observation space.
+
+**Why**
+Encourages symmetric, periodic walking without hard-coding a fixed gait.
+
+**Where**
+- `rob6323_go2_env.py`: `_step_contact_targets`
+- Observation vector expansion
+
+---
+
+### 4. Raibert Heuristic Foot Placement *(Tutorial Part 4)*
+**What changed**
+- Implemented Raibert-style foot placement error based on commanded velocity.
+- Penalized deviation from desired stance locations.
+
+**Why**
+Improves step placement and tracking of commanded motion.
+
+**Where**
+- `rob6323_go2_env.py`: `_reward_raibert_heuristic`
+
+---
+
+### 5. Posture and Motion Stabilization Rewards *(Tutorial Part 5)*
+**What changed**
+Added penalties for:
+- Base tilt using projected gravity (XY components)
+- Vertical base velocity (bouncing)
+- Excessive joint velocities
+- Roll and pitch angular velocities
+
+**Why**
+Encourages upright posture, reduces oscillations, and improves overall stability.
+
+**Where**
+- `rob6323_go2_env.py`: `_get_rewards`
+  - `orient`
+  - `lin_vel_z`
+  - `dof_vel`
+  - `ang_vel_xy`
+
+---
+
+### 6. Foot Clearance During Swing *(Tutorial Part 6)*
+**What changed**
+- Penalized insufficient foot lift during swing phase.
+- Used gait phase to gate the penalty to swing-only motion.
+
+**Why**
+Prevents foot dragging and improves step quality.
+
+**Where**
+- `rob6323_go2_env.py`: `feet_clearance` reward
+
+---
+
+### 7. Contact Force Shaping During Swing *(Tutorial Part 6)*
+**What changed**
+- Used contact sensor force magnitudes.
+- Penalized ground contact forces when a foot is expected to be in swing.
+- Added lazy initialization of contact sensor body indices.
+
+**Why**
+Encourages correct footfall timing and discourages spurious contacts.
+
+**Where**
+- `rob6323_go2_env.py`: `tracking_contacts_shaped_force`
+- `rob6323_go2_env.py`: `_reset_idx` (sensor index initialization)
+
+---
+
+## Additional Reward Extensions (Beyond Tutorial)
+
+These components were added beyond the official tutorial to further improve gait realism.
+
+### 8. Torque Magnitude Penalty *(Extension)*
+**What changed**
+- Penalized the L2 norm of joint torques.
+
+**Why**
+Encourages energy-efficient motion and avoids aggressive actuation.
+
+**Where**
+- `rob6323_go2_env.py`: `torque` reward
+
+---
+
+### 9. Foot Slip (Sliding) Penalty *(Extension)*
+**What changed**
+- Penalized horizontal (XY) foot velocity during stance phases.
+- Gated the penalty using the desired contact state from the gait planner.
+
+**Why**
+Reduces ground sliding, improves traction, and leads to cleaner foot contacts.
+
+**Where**
+- `rob6323_go2_env.py`: `foot_slip` reward
+
+**Note**
+This reward is **not explicitly required** by Tutorial Part 6 and represents an additional extension built on the gait and contact modeling introduced there.
+
+---
+
+## TA-Recommended Fixe (in Slack) is Incorporated
+
+### 10. Contact Sensor Registration (TA Fix)
+**What changed**
+Explicitly registered the contact sensor with the scene.
+
+**Why**
+Ensures contact force data is correctly updated and accessible for reward computation and termination checks. Without explicitly registering the sensor, contact-based rewards and terminations may use stale or missing data.
+
+**Where**
+- `rob6323_go2_env.py`: `_setup_scene`
+
+---
+
+### 11. Base Height Termination Threshold (TA Fix)
+**What changed**
+Lowered the minimum base height threshold (`base_height_min`) from 0.20 m to 0.05 m.
+
+**Why**
+The original 0.20m threshold caused premature episode termination during normal walking and crouching. Lowering the threshold allows natural base motion while still terminating collapsed or failed gaits.
+
+**Where**
+- `rob6323_go2_env_cfg.py`
+
+---
+
+## Termination Conditions
+To improve sample efficiency and prevent training on unrecoverable states, episodes terminate if:
+* **Base Collision:** The main body (chassis) makes contact with the ground.
+* **Orientation:** The robot flips upside down.
+* **Base Height:** The base height falls below 0.05 m.
+* **Time Limit:** The maximum episode length is reached.
+
+---
+
+## Reward Summary
+
+### Baseline Rewards (Starter Code)
+* **track_lin_vel_xy_exp**: Exponential tracking of commanded linear velocity.
+* **track_ang_vel_z_exp**: Exponential tracking of commanded yaw rate.
+
+### Tutorial Rewards (Parts 1–6)
+* **rew_action_rate**: Penalizes rapid and jerky action changes.
+* **raibert_heuristic**: Encourages optimal foot placement based on current velocity.
+* **orient**: Penalizes base roll and pitch to keep the robot level.
+* **lin_vel_z**: Penalizes vertical "bouncing" motion.
+* **dof_vel**: Penalizes excessive joint velocities.
+* **ang_vel_xy**: Penalizes roll and pitch angular velocity.
+* **feet_clearance**: Penalizes dragging feet during the swing phase.
+* **tracking_contacts_shaped_force**: Penalizes ground contact forces when a foot should be in the air.
+
+### Additional Rewards (Extensions)
+* **torque**: Penalizes high torque magnitude for energy efficiency and motor safety.
+* **foot_slip**: Penalizes horizontal foot velocity during stance to ensure firm traction and reduce sliding.
