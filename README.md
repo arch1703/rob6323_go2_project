@@ -184,7 +184,7 @@ This project extends the provided ROB6323 Go2 locomotion baseline environment. T
 - Added torque clipping and torque logging.
 
 **Why**
-Torque control enables smoother and more realistic actuation, allows torque regularization, and aligns with modern quadruped locomotion pipelines.
+- Torque control enables smoother and more realistic actuation, allows torque regularization, and aligns with modern quadruped locomotion pipelines.
 
 **Where**
 - `rob6323_go2_env.py`: `_pre_physics_step`, `_apply_action`
@@ -198,7 +198,7 @@ Torque control enables smoother and more realistic actuation, allows torque regu
 - Penalized both first-order (action rate) and second-order (action acceleration) differences.
 
 **Why**
-Reduces jerky motions, improves smoothness, and stabilizes training.
+- Reduces jerky motions, improves smoothness, and stabilizes training.
 
 **Where**
 - `rob6323_go2_env.py`: `last_actions`, `rew_action_rate` in `_get_rewards`
@@ -212,7 +212,7 @@ Reduces jerky motions, improves smoothness, and stabilizes training.
 - Added gait phase signals (`clock_inputs`) to the observation space.
 
 **Why**
-Encourages symmetric, periodic walking without hard-coding a fixed gait.
+- Encourages symmetric, periodic walking without hard-coding a fixed gait.
 
 **Where**
 - `rob6323_go2_env.py`: `_step_contact_targets`
@@ -226,7 +226,7 @@ Encourages symmetric, periodic walking without hard-coding a fixed gait.
 - Penalized deviation from desired stance locations.
 
 **Why**
-Improves step placement and tracking of commanded motion.
+- Improves step placement and tracking of commanded motion.
 
 **Where**
 - `rob6323_go2_env.py`: `_reward_raibert_heuristic`
@@ -242,7 +242,7 @@ Added penalties for:
 - Roll and pitch angular velocities
 
 **Why**
-Encourages upright posture, reduces oscillations, and improves overall stability.
+- Encourages upright posture, reduces oscillations, and improves overall stability.
 
 **Where**
 - `rob6323_go2_env.py`: `_get_rewards`
@@ -259,7 +259,7 @@ Encourages upright posture, reduces oscillations, and improves overall stability
 - Used gait phase to gate the penalty to swing-only motion.
 
 **Why**
-Prevents foot dragging and improves step quality.
+- Prevents foot dragging and improves step quality.
 
 **Where**
 - `rob6323_go2_env.py`: `feet_clearance` reward
@@ -273,7 +273,7 @@ Prevents foot dragging and improves step quality.
 - Added lazy initialization of contact sensor body indices.
 
 **Why**
-Encourages correct footfall timing and discourages spurious contacts.
+- Encourages correct footfall timing and discourages spurious contacts.
 
 **Where**
 - `rob6323_go2_env.py`: `tracking_contacts_shaped_force`
@@ -286,30 +286,42 @@ Encourages correct footfall timing and discourages spurious contacts.
 These components were added beyond the official tutorial to further improve gait realism.
 
 ### 8. Torque Magnitude Penalty *(Extension)*
+
 **What changed**
-- Penalized the L2 norm of joint torques.
+- Penalized the L2 norm of joint torques applied at each timestep.
+- The penalty weight is defined in the environment configuration for easy tuning.
+
+**Reward scale (defined in config)**
+- `torque_reward_scale = -1e-4`
 
 **Why**
-Encourages energy-efficient motion and avoids aggressive actuation.
+- Encourages energy-efficient motion and avoids overly aggressive actuation.
 
 **Where**
-- `rob6323_go2_env.py`: `torque` reward
+- `rob6323_go2_env_cfg.py`: `torque_reward_scale`
+- `rob6323_go2_env.py`: `torque` reward applied in `_get_rewards`
 
 ---
 
 ### 9. Foot Slip (Sliding) Penalty *(Extension)*
+
 **What changed**
 - Penalized horizontal (XY) foot velocity during stance phases.
 - Gated the penalty using the desired contact state from the gait planner.
+- The penalty weight is defined in the environment configuration.
+
+**Reward scale (defined in config)**
+- `foot_slip_reward_scale = -0.005`
 
 **Why**
-Reduces ground sliding, improves traction, and leads to cleaner foot contacts.
+- Reduces ground sliding, improves traction, and leads to cleaner foot contacts.
 
 **Where**
-- `rob6323_go2_env.py`: `foot_slip` reward
+- `rob6323_go2_env_cfg.py`: `foot_slip_reward_scale`
+- `rob6323_go2_env.py`: `foot_slip` reward applied in `_get_rewards`
 
 **Note**
-This reward is **not explicitly required** by Tutorial Part 6 and represents an additional extension built on the gait and contact modeling introduced there.
+This reward is **not explicitly required** by the tutorial and represents an additional extension built on the gait and contact modeling introduced there.
 
 ---
 
@@ -317,10 +329,10 @@ This reward is **not explicitly required** by Tutorial Part 6 and represents an 
 
 ### 10. Contact Sensor Registration (TA Fix)
 **What changed**
-Explicitly registered the contact sensor with the scene.
+- Explicitly registered the contact sensor with the scene.
 
 **Why**
-Ensures contact force data is correctly updated and accessible for reward computation and termination checks. Without explicitly registering the sensor, contact-based rewards and terminations may use stale or missing data.
+- Ensures contact force data is correctly updated and accessible for reward computation and termination checks. Without explicitly registering the sensor, contact-based rewards and terminations may use stale or missing data.
 
 **Where**
 - `rob6323_go2_env.py`: `_setup_scene`
@@ -329,10 +341,10 @@ Ensures contact force data is correctly updated and accessible for reward comput
 
 ### 11. Base Height Termination Threshold (TA Fix)
 **What changed**
-Lowered the minimum base height threshold (`base_height_min`) from 0.20 m to 0.05 m.
+- Lowered the minimum base height threshold (`base_height_min`) from 0.20 m to 0.05 m.
 
 **Why**
-The original 0.20m threshold caused premature episode termination during normal walking and crouching. Lowering the threshold allows natural base motion while still terminating collapsed or failed gaits.
+- The original 0.20m threshold caused premature episode termination during normal walking and crouching. Lowering the threshold allows natural base motion while still terminating collapsed or failed gaits.
 
 **Where**
 - `rob6323_go2_env_cfg.py`
