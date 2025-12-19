@@ -35,7 +35,8 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     tracking_contacts_shaped_force_reward_scale = 4.0
 
     # Additional
-    torque_reward_scale = -5e-5
+    torque_reward_scale = -1e-4
+    #-5e-5 tried with this and foot_slip - 135346
     #-1e-4 with this got log/134757
     foot_slip_reward_scale = -0.005
 
@@ -74,12 +75,12 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     
     # "base_legs" is an arbitrary key we use to group these actuators
     robot_cfg.actuators["base_legs"] = ImplicitActuatorCfg(
-    joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
-    effort_limit=23.5,
-    velocity_limit=30.0,
-    stiffness=0.0,  # CRITICAL: Set to 0 to disable implicit P-gain
-    damping=0.0,    # CRITICAL: Set to 0 to disable implicit D-gain
-)
+        joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
+        effort_limit=23.5,
+        velocity_limit=30.0,
+        stiffness=0.0,  # CRITICAL: Set to 0 to disable implicit P-gain
+        damping=0.0,    # CRITICAL: Set to 0 to disable implicit D-gain
+    )
     
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)

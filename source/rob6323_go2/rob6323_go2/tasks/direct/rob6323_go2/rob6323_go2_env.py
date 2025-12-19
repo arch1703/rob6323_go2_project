@@ -33,9 +33,6 @@ class Rob6323Go2Env(DirectRLEnv):
 
         # Joint position command (deviation from default joint positions)
         self._actions = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
-        self._previous_actions = torch.zeros(
-            self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device
-        )
 
         # X/Y linear velocity and yaw angular velocity commands
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
@@ -63,8 +60,8 @@ class Rob6323Go2Env(DirectRLEnv):
             ]
         }
         # Get specific body indices
-        # ADDITIONAL: Moved to _setup_scene self._base_id, _ = self._contact_sensor.find_bodies("base")
-        # self._feet_ids, _ = self._contact_sensor.find_bodies(".*foot")
+        self._base_id, _ = self._contact_sensor.find_bodies("base")
+        
         # self._undesired_contact_body_ids, _ = self._contact_sensor.find_bodies(".*thigh")
 
         # add handle for debug visualization (this is set to a valid handle inside set_debug_vis)
@@ -89,7 +86,8 @@ class Rob6323Go2Env(DirectRLEnv):
             id_list, _ = self.robot.find_bodies(name)
             self._feet_ids.append(id_list[0])
 
-        self._feet_ids_sensor = []
+        self._feet_ids_sensor = [] # Populated in _reset_idx (contact sensor indices)
+        
         # Variables needed for the raibert heuristic
         self.gait_indices = torch.zeros(self.num_envs, dtype=torch.float, device=self.device, requires_grad=False)
         self.clock_inputs = torch.zeros(self.num_envs, 4, dtype=torch.float, device=self.device, requires_grad=False)
@@ -118,7 +116,7 @@ class Rob6323Go2Env(DirectRLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _get_observations(self) -> dict:
-        self._previous_actions = self._actions.clone()
+        
         obs = torch.cat(
             [
                 tensor
@@ -160,19 +158,25 @@ class Rob6323Go2Env(DirectRLEnv):
         rew_raibert_heuristic = self._reward_raibert_heuristic()
         
         ## Additional 
+        # Gait phase shaping: produces a smooth triangular swing profile in [0, 1]
         phases = 1 - torch.abs(
             1.0 - torch.clip((self.foot_indices * 2.0) - 1.0, 0.0, 1.0) * 2.0
         )
 
+        # Current foot heights (world frame, z-axis)
         foot_height = self.foot_positions_w[:, :, 2]
+        # Desired swing clearance height (higher during swing, small offset always)
         target_height = 0.08 * phases + 0.02
 
+        # Penalize deviation from target height only during swing phase
         rew_foot_clearance = torch.square(target_height - foot_height) * (
             1 - self.desired_contact_states
         )
 
+        # Aggregate foot clearance penalty across all feet
         rew_feet_clearance = torch.sum(rew_foot_clearance, dim=1)
         
+        # Penalize body tilt using projected gravity (XY components only)
         rew_orient = torch.sum(
             torch.square(self.robot.data.projected_gravity_b[:, :2]),
             dim=1,
@@ -181,14 +185,13 @@ class Rob6323Go2Env(DirectRLEnv):
         # desired contact from gait planner (stance ≈ 1, swing ≈ 0)
         desired_contacts = self.desired_contact_states
 
-        # shaped reward:
-        # - reward force when contact is desired
-        # - penalize force when contact is not desired
+        # Contact force magnitudes for each foot (sensor frame)
         foot_forces = torch.norm(
             self._contact_sensor.data.net_forces_w[:, self._feet_ids_sensor, :],
             dim=-1
         )
-
+        
+        # Penalize contact forces when foot is supposed to be in swing
         rew_tracking_contacts_shaped_force = 0.0
         for i in range(4):
             rew_tracking_contacts_shaped_force += -(
@@ -198,28 +201,30 @@ class Rob6323Go2Env(DirectRLEnv):
         rew_tracking_contacts_shaped_force = rew_tracking_contacts_shaped_force / 4.0
 
         # Torque magnitude penalty (L2 norm)
-        # elective torque penalty
         rew_torque = torch.sum(self._torques ** 2, dim=1)
 
-        # Contact mask: force magnitude > threshold
+        # Foot linear velocity in XY plane (world frame)
         foot_vel = self.robot.data.body_lin_vel_w[:, self._feet_ids, :2]
         
+        # Contact mask for stance feet only
         contact_mask = (self.desired_contact_states > 0.5).float()
+        
+        # Penalize foot slip during stance
         rew_slip = torch.sum(
             contact_mask * torch.norm(foot_vel, dim=2),
             dim=1
         )
 
-        # root_lin_vel_b shape: (num_envs, 3)
+        # Penalize vertical base velocity (bouncing)
         rew_lin_vel_z = torch.square(self.robot.data.root_lin_vel_b[:, 2])
 
-        # joint_vel shape: (num_envs, num_dofs)
+        # Penalize excessive joint velocities
         rew_dof_vel = torch.sum(
             torch.square(self.robot.data.joint_vel),
             dim=1,
         )
 
-        # root_ang_vel_b shape: (num_envs, 3)
+        # Penalize roll and pitch rates (angular velocity in XY)
         rew_ang_vel_xy = torch.sum(
             torch.square(self.robot.data.root_ang_vel_b[:, :2]),
             dim=1,
@@ -255,7 +260,7 @@ class Rob6323Go2Env(DirectRLEnv):
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        # ADDITIONAL - only under IF
+        # ADDITIONAL part- lazy initialization: contact sensor body indices are only available after first reset
         if not hasattr(self, "_contact_ids_initialized"):
             return (
                 torch.zeros(self.num_envs, dtype=torch.bool, device=self.device),
@@ -284,7 +289,7 @@ class Rob6323Go2Env(DirectRLEnv):
             # Spread out the resets to avoid spikes in training when many environments reset at a similar time
             self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
         self._actions[env_ids] = 0.0
-        self._previous_actions[env_ids] = 0.0
+        
         # Sample new commands
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
         # Reset robot state
@@ -314,7 +319,6 @@ class Rob6323Go2Env(DirectRLEnv):
 
         # Additional
         if not hasattr(self, "_contact_ids_initialized"):
-            self._base_id, _ = self._contact_sensor.find_bodies("base")
             
             foot_names = ["FL_foot", "FR_foot", "RL_foot", "RR_foot"]
             for name in foot_names:    
