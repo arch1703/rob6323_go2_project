@@ -175,14 +175,6 @@ This project extends the provided ROB6323 Go2 locomotion baseline environment. T
 
 ---
 
-## Tutorial Coverage
-
-- **Tutorial Parts Implemented:** Parts 1–6  
-- **Baseline (Parts 1–4):** Initially completed in the provided repository  
-- **Our Work:** Implemented and extended **Parts 5–6**, plus additional reward shaping and TA-requested fixes
-
----
-
 ## Major Changes and Rationale
 
 ### 1. Torque-Level PD Control *(Tutorial Part 1)*
