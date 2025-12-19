@@ -379,3 +379,22 @@ To improve sample efficiency and prevent training on unrecoverable states, episo
 ### Additional Rewards (Extensions)
 * **torque**: Penalizes high torque magnitude for energy efficiency and motor safety.
 * **foot_slip**: Penalizes horizontal foot velocity during stance to ensure firm traction and reduce sliding.
+
+---
+
+## Reproducibility
+
+All reported experiments were run with a fixed random seed (42) to ensure reproducibility of environment initialization, command sampling, and reward computation.
+
+### Training Command
+
+Training was launched using the provided script with an explicit seed argument:
+
+cd "$HOME/rob6323_go2_project"
+./train.sh --seed 42
+
+### Notes on Determinism
+- The `--seed` flag initializes the random number generators used by Isaac Lab and the PPO training pipeline.
+- All experiments in this repository use `seed = 42` unless otherwise noted.
+- This ensures deterministic environment resets and command sampling across runs.
+- Due to the stochastic nature of PPO (e.g., minibatch sampling and floating point nondeterminism), results are reproducible up to small numerical variation.
