@@ -34,6 +34,12 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     feet_clearance_reward_scale = -30.0
     tracking_contacts_shaped_force_reward_scale = 4.0
 
+    # Additional
+    torque_reward_scale = -1e-4
+    #-5e-5 tried with this and foot_slip - 135346
+    #-1e-4 with this got log/134757
+    foot_slip_reward_scale = -0.005
+
     # simulation
     sim: SimulationCfg = SimulationCfg(
         dt=1 / 200,
@@ -69,20 +75,13 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     
     # "base_legs" is an arbitrary key we use to group these actuators
     robot_cfg.actuators["base_legs"] = ImplicitActuatorCfg(
-    joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
-    effort_limit=23.5,
-    velocity_limit=30.0,
-    stiffness=0.0,  # CRITICAL: Set to 0 to disable implicit P-gain
-    damping=0.0,    # CRITICAL: Set to 0 to disable implicit D-gain
-)
+        joint_names_expr=[".*_hip_joint", ".*_thigh_joint", ".*_calf_joint"],
+        effort_limit=23.5,
+        velocity_limit=30.0,
+        stiffness=0.0,  # CRITICAL: Set to 0 to disable implicit P-gain
+        damping=0.0,    # CRITICAL: Set to 0 to disable implicit D-gain
+    )
     
-    @property
-    def foot_positions_w(self) -> torch.Tensor:
-        """Returns the feet positions in the world frame.
-        Shape: (num_envs, num_feet, 3)
-        """
-        return self.robot.data.body_pos_w[:, self._feet_ids]
-
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
     contact_sensor: ContactSensorCfg = ContactSensorCfg(
@@ -107,4 +106,10 @@ class Rob6323Go2EnvCfg(DirectRLEnvCfg):
     yaw_rate_reward_scale = 0.5
     action_rate_reward_scale = -0.1
     
-    base_height_min = 0.20  # Terminate if base is lower than 20cm
+    base_height_min = 0.05  # Terminate if base is lower than 20cm
+
+    # In Rob6323Go2EnvCfg
+    orient_reward_scale = -5.0
+    lin_vel_z_reward_scale = -0.02
+    dof_vel_reward_scale = -0.0001
+    ang_vel_xy_reward_scale = -0.001
