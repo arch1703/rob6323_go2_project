@@ -390,8 +390,11 @@ All reported experiments were run with a fixed random seed (42) to ensure reprod
 
 Training was launched using the provided script with an explicit seed argument:
 
+```bash
 cd "$HOME/rob6323_go2_project"
 ./train.sh --seed 42
+```
+
 
 ### Notes on Determinism
 - The `--seed` flag initializes the random number generators used by Isaac Lab and the PPO training pipeline.
