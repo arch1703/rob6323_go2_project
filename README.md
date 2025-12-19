@@ -313,7 +313,7 @@ This reward is **not explicitly required** by Tutorial Part 6 and represents an 
 
 ---
 
-## TA-Recommended Fixe (in Slack) is Incorporated
+## TA-Recommended (in slack) Changes is Incorporated
 
 ### 10. Contact Sensor Registration (TA Fix)
 **What changed**
