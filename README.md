@@ -177,7 +177,7 @@ This project extends the provided ROB6323 Go2 locomotion baseline environment. T
 
 ## Major Changes and Rationale
 
-### 1. Torque-Level PD Control *(Tutorial Part 1)*
+### 1. Torque Level PD Control *(Tutorial Part 1)*
 **What changed**
 - Replaced joint position targets with explicit PD torque control.
 - Disabled Isaac Lab’s implicit actuator stiffness and damping.
