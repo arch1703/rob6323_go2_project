@@ -171,7 +171,7 @@ Students should only edit README.md below this line.
 
 ## Overview
 
-This project extends the provided ROB6323 Go2 locomotion baseline environment. The original environment used joint position control and only rewarded linear and yaw velocity tracking. We introduced torque-level control, gait modeling, stability rewards, and advanced foot interaction modeling. Additional reward terms were added to further improve gait quality and realism.
+This project extends the provided ROB6323 Go2 locomotion baseline environment. The original environment used joint position control and only rewarded linear and yaw velocity tracking. This implementation introduces torque level control, gait modeling, stability rewards, and advanced foot interaction modeling. Additional reward terms were added to further improve gait quality and realism.
 
 ---
 
@@ -195,7 +195,7 @@ This project extends the provided ROB6323 Go2 locomotion baseline environment. T
 ### 2. Action Rate Regularization *(Tutorial Part 1)*
 **What changed**
 - Added a rolling action history buffer (`last_actions`).
-- Penalized both first-order (action rate) and second-order (action acceleration) differences.
+- Penalized both first order (action rate) and second order (action acceleration) differences.
 
 **Why**
 - Reduces jerky motions, improves smoothness, and stabilizes training.
@@ -212,7 +212,7 @@ This project extends the provided ROB6323 Go2 locomotion baseline environment. T
 - Added gait phase signals (`clock_inputs`) to the observation space.
 
 **Why**
-- Encourages symmetric, periodic walking without hard-coding a fixed gait.
+- Encourages symmetric, periodic walking without hard coding a fixed gait.
 
 **Where**
 - `rob6323_go2_env.py`: `_step_contact_targets`
@@ -222,7 +222,7 @@ This project extends the provided ROB6323 Go2 locomotion baseline environment. T
 
 ### 4. Raibert Heuristic Foot Placement *(Tutorial Part 4)*
 **What changed**
-- Implemented Raibert-style foot placement error based on commanded velocity.
+- Implemented Raibert style foot placement error based on commanded velocity.
 - Penalized deviation from desired stance locations.
 
 **Why**
@@ -295,7 +295,7 @@ These components were added beyond the official tutorial to further improve gait
 - `torque_reward_scale = -1e-4`
 
 **Why**
-- Encourages energy-efficient motion and avoids overly aggressive actuation.
+- Encourages energy efficient motion and avoids overly aggressive actuation.
 
 **Where**
 - `rob6323_go2_env_cfg.py`: `torque_reward_scale`
@@ -332,7 +332,7 @@ This reward is **not explicitly required** by the tutorial and represents an add
 - Explicitly registered the contact sensor with the scene.
 
 **Why**
-- Ensures contact force data is correctly updated and accessible for reward computation and termination checks. Without explicitly registering the sensor, contact-based rewards and terminations may use stale or missing data.
+- Ensures contact force data is correctly updated and accessible for reward computation and termination checks. Without explicitly registering the sensor, contact based rewards and terminations may use stale or missing data.
 
 **Where**
 - `rob6323_go2_env.py`: `_setup_scene`
@@ -394,7 +394,6 @@ Training was launched using the provided script with an explicit seed argument:
 cd "$HOME/rob6323_go2_project"
 ./train.sh --seed 42
 ```
-
 
 ### Notes on Determinism
 - The `--seed` flag initializes the random number generators used by Isaac Lab and the PPO training pipeline.
