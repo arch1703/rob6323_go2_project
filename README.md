@@ -171,7 +171,7 @@ Students should only edit README.md below this line.
 
 ## Overview
 
-This project extends the provided ROB6323 Go2 locomotion baseline environment. The original environment used joint position control and only rewarded linear and yaw velocity tracking. Following the official course tutorial (Parts 1–6) and TA guidance, we introduced torque-level control, gait modeling, stability rewards, and advanced foot interaction modeling. Additional reward terms were added to further improve gait quality and realism.
+This project extends the provided ROB6323 Go2 locomotion baseline environment. The original environment used joint position control and only rewarded linear and yaw velocity tracking. We introduced torque-level control, gait modeling, stability rewards, and advanced foot interaction modeling. Additional reward terms were added to further improve gait quality and realism.
 
 ---
 
